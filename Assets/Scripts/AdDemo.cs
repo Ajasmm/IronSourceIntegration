@@ -4,22 +4,8 @@ public class AdDemo : MonoBehaviour
 {
     private void OnEnable()
     {
-        AdManagerRewardedAdEvents.onAdRewardedEvent += OnRewarded;
-        AdManagerRewardedAdEvents.onAdShowFailedEvent += OnFailed;
-
         AdManager.Instance.Initialize();
     }
-
-    public void OnRewarded()
-    {
-        Debug.LogWarning("Rewarded");
-    }
-    public void OnFailed()
-    {
-        Debug.LogWarning("Not Rewarded");
-    }
-
-
 
     public void ShowBannerAd()
     {
@@ -35,6 +21,6 @@ public class AdDemo : MonoBehaviour
     }
     public void showRewarded()
     {
-        AdManager.Instance.ShowRewardedAd();
+        AdManager.Instance.ShowRewardedAd((RewardedAdResult result) => { Debug.LogWarning(result.ToString()); });
     }
 }

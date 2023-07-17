@@ -4,7 +4,7 @@ using UnityEngine;
 public class AdManager : MonoBehaviour
 {
     bool showBannerAd = false;
-
+    event Action<RewardedAdResult> rewardedAdCallbacks;
 
     public static AdManager Instance { get { return GetInstance(); } }
     private static AdManager instance;
@@ -62,6 +62,74 @@ public class AdManager : MonoBehaviour
         IronSourceBannerEvents.onAdScreenDismissedEvent += BannerOnAdScreenDismissedEvent;
         IronSourceBannerEvents.onAdLeftApplicationEvent += BannerOnAdLeftApplicationEvent;
     }
+    public void Initialize()
+    {
+        // everything elses is automaticaly initialized by ironsource sdk
+        IronSource.Agent.loadRewardedVideo();
+        IronSource.Agent.loadInterstitial();
+    }
+    public void OnApplicationPause(bool pause)
+    {
+        IronSource.Agent.onApplicationPause(pause);
+    }
+
+
+    public void ShowInterstitialAd()
+    {
+        if (IronSource.Agent.isInterstitialReady())
+        {
+            IronSource.Agent.showInterstitial();
+        }
+        else
+        {
+            IronSource.Agent.loadInterstitial();
+        }
+    }
+
+    public void ShowBannerAd()
+    {
+        IronSource.Agent.loadBanner(IronSourceBannerSize.SMART, IronSourceBannerPosition.BOTTOM);
+        showBannerAd = true;
+    }
+    public void DestroyBannerAd()
+    {
+        IronSource.Agent.destroyBanner();
+        showBannerAd = false;
+    }
+
+    public void ShowRewardedAd(Action<RewardedAdResult> callback)
+    {
+        rewardedAdCallbacks += callback;
+
+        if (IronSource.Agent.isRewardedVideoAvailable())
+            IronSource.Agent.showRewardedVideo();
+        else if (IronSource.Agent.isInterstitialReady())
+            IronSource.Agent.showInterstitial();
+        else
+        {
+            IronSource.Agent.loadRewardedVideo();
+            IronSource.Agent.loadInterstitial();
+            rewardedAdCallbacks?.Invoke(RewardedAdResult.Failed);
+            rewardedAdCallbacks = null;
+        }
+    }
+    public bool IsRewardedAdAvailable()
+    {
+        if (IronSource.Agent.isRewardedVideoAvailable())
+        {
+            return true;
+        }else if (IronSource.Agent.isInterstitialReady())
+        {
+            IronSource.Agent.loadRewardedVideo();
+            return true;
+        }
+        else
+        {
+            IronSource.Agent.loadRewardedVideo();
+            IronSource.Agent.loadInterstitial();
+            return false;
+        }
+    }
 
 
     #region Rewarded callbacks
@@ -96,11 +164,15 @@ public class AdManager : MonoBehaviour
     void RewardedVideoOnAdRewardedEvent(IronSourcePlacement placement, IronSourceAdInfo adInfo)
     {
         AdManagerRewardedAdEvents.onAdRewardedEvent?.Invoke();
+        rewardedAdCallbacks?.Invoke(RewardedAdResult.Successful);
+        rewardedAdCallbacks = null;
     }
     // The rewarded video ad was failed to show.
     void RewardedVideoOnAdShowFailedEvent(IronSourceError error, IronSourceAdInfo adInfo)
     {
         AdManagerRewardedAdEvents.onAdShowFailedEvent?.Invoke();
+        rewardedAdCallbacks?.Invoke(RewardedAdResult.Failed);
+        rewardedAdCallbacks = null;
     }
     // Invoked when the video ad was clicked.
     // This callback is not supported by all networks, and we recommend using it only if
@@ -116,28 +188,38 @@ public class AdManager : MonoBehaviour
     // Invoked when the interstitial ad was loaded succesfully.
     void InterstitialOnAdReadyEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerInterstitialAdEvents.onAdReadyEvent?.Invoke();
     }
     // Invoked when the initialization process has failed.
     void InterstitialOnAdLoadFailed(IronSourceError ironSourceError)
     {
         IronSource.Agent.loadInterstitial();
+        AdManagerInterstitialAdEvents.onAdLoadFailedEvent?.Invoke();
     }
     // Invoked when the Interstitial Ad Unit has opened. This is the impression indication. 
     void InterstitialOnAdOpenedEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerInterstitialAdEvents.onAdOpenedEvent?.Invoke();
     }
     // Invoked when end user clicked on the interstitial ad
     void InterstitialOnAdClickedEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerInterstitialAdEvents.onAdClickedEvent?.Invoke();
     }
     // Invoked when the ad failed to show.
     void InterstitialOnAdShowFailedEvent(IronSourceError ironSourceError, IronSourceAdInfo adInfo)
     {
+        AdManagerInterstitialAdEvents.onAdShowFailedEvent?.Invoke();
+        rewardedAdCallbacks?.Invoke(RewardedAdResult.Failed);
+        rewardedAdCallbacks = null;
     }
     // Invoked when the interstitial ad closed and the user went back to the application screen.
     void InterstitialOnAdClosedEvent(IronSourceAdInfo adInfo)
     {
         IronSource.Agent.loadInterstitial();
+        AdManagerInterstitialAdEvents.onAdClosedEvent?.Invoke();
+        rewardedAdCallbacks?.Invoke(RewardedAdResult.Successful);
+        rewardedAdCallbacks = null;
     }
     // Invoked before the interstitial ad was opened, and before the InterstitialOnAdOpenedEvent is reported.
     // This callback is not supported by all networks, and we recommend using it only if  
@@ -146,6 +228,8 @@ public class AdManager : MonoBehaviour
     {
         Debug.LogWarning("Interstitial showd success fully");
         AdManagerRewardedAdEvents.onAdRewardedEvent?.Invoke();
+        rewardedAdCallbacks?.Invoke(RewardedAdResult.Successful);
+        rewardedAdCallbacks = null;
     }
     #endregion
 
@@ -156,113 +240,34 @@ public class AdManager : MonoBehaviour
     {
         if (showBannerAd)
             IronSource.Agent.displayBanner();
+        AdManagerBannerAdEvents.onAdLoadedEvent?.Invoke();
     }
     //Invoked when the banner loading process has failed.
     void BannerOnAdLoadFailedEvent(IronSourceError ironSourceError)
     {
         IronSource.Agent.loadBanner(IronSourceBannerSize.SMART, IronSourceBannerPosition.BOTTOM);
+        AdManagerBannerAdEvents.onAdLoadFailedEvent?.Invoke();
     }
     // Invoked when end user clicks on the banner ad
     void BannerOnAdClickedEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerBannerAdEvents.onAdClickedEvent?.Invoke();
     }
     //Notifies the presentation of a full screen content following user click
     void BannerOnAdScreenPresentedEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerBannerAdEvents.onAdScreenPresentedEvent?.Invoke();
     }
     //Notifies the presented screen has been dismissed
     void BannerOnAdScreenDismissedEvent(IronSourceAdInfo adInfo)
     {
+        AdManagerBannerAdEvents.onAdScreenDismissedEvent?.Invoke();
     }
     //Invoked when the user leaves the app
     void BannerOnAdLeftApplicationEvent(IronSourceAdInfo adInfo)
     {
         IronSource.Agent.destroyBanner();
+        AdManagerBannerAdEvents.onAdLeftApplicationEvent?.Invoke();
     }
     #endregion
-
-    public void Initialize()
-    {
-        IronSource.Agent.loadRewardedVideo();
-        IronSource.Agent.loadInterstitial();
-    }
-    public void OnApplicationPause(bool pause)
-    {
-        IronSource.Agent.onApplicationPause(pause);
-    }
-
-
-    public void ShowInterstitialAd()
-    {
-        if (IronSource.Agent.isInterstitialReady())
-        {
-            IronSource.Agent.showInterstitial();
-        }
-        else
-        {
-            IronSource.Agent.loadInterstitial();
-        }
-    }
-
-    public void ShowBannerAd()
-    {
-        IronSource.Agent.loadBanner(IronSourceBannerSize.SMART, IronSourceBannerPosition.BOTTOM);
-        showBannerAd = true;
-    }
-    public void DestroyBannerAd()
-    {
-        IronSource.Agent.destroyBanner();
-        showBannerAd = false;
-    }
-
-    public void ShowRewardedAd()
-    {
-        if (IronSource.Agent.isRewardedVideoAvailable())
-            IronSource.Agent.showRewardedVideo();
-        else if (IronSource.Agent.isInterstitialReady())
-            IronSource.Agent.showInterstitial();
-        else
-        {
-            IronSource.Agent.loadRewardedVideo();
-            IronSource.Agent.loadInterstitial();
-        }
-    }
-    public bool IsRewardedAdAvailable()
-    {
-        return IronSource.Agent.isRewardedVideoAvailable() || IronSource.Agent.isInterstitialReady();
-    }
-
-}
-
-public static class AdManagerRewardedAdEvents
-{
-    // Rewarded Video
-    public static Action onAdShowFailedEvent;
-    public static Action onAdOpenedEvent;
-    public static Action onAdClosedEvent;
-    public static Action onAdRewardedEvent;
-    public static Action onAdAvailableEvent;
-    public static Action onAdUnavailableEvent;
-    public static Action onAdLoadFailedEvent;
-    public static Action onAdReadyEvent;
-} 
-public static class AdManagerInterstitialAdEvents
-{
-    // Interstitial
-    public static event Action onAdReadyEvent;
-    public static event Action onAdLoadFailedEvent;
-    public static event Action onAdOpenedEvent;
-    public static event Action onAdClosedEvent;
-    public static event Action onAdShowSucceededEvent;
-    public static event Action onAdShowFailedEvent;
-    public static event Action onAdClickedEvent;
-}
-public static class AdManagerBannerAdEvents
-{
-    public static event Action onAdLoadedEvent;
-    public static event Action onAdLeftApplicationEvent;
-    public static event Action onAdScreenDismissedEvent;
-    public static event Action onAdScreenPresentedEvent;
-    public static event Action onAdClickedEvent;
-    public static event Action onAdLoadFailedEvent;
 }
