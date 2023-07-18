@@ -9,7 +9,7 @@ public class AdDemo : MonoBehaviour
 
     public void ShowBannerAd()
     {
-        AdManager.Instance.ShowBannerAd(IronSourceBannerPosition.BOTTOM);
+        AdManager.Instance.ShowBannerAd(AdManager.BannerAdPosition.BOTTOM);
     }
     public void HideBannerAd()
     {

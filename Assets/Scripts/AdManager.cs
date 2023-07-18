@@ -148,9 +148,19 @@ public class AdManager : MonoBehaviour
             IronSource.Agent.loadInterstitial();
         }
     }
-    public void ShowBannerAd(IronSourceBannerPosition bannerAdPosition)
+    public void ShowBannerAd(BannerAdPosition bannerAdPosition)
     {
-        IronSource.Agent.loadBanner(IronSourceBannerSize.SMART, bannerAdPosition);
+        IronSourceBannerPosition bannerPos;
+        switch (bannerAdPosition)
+        {
+            case BannerAdPosition.TOP:
+                bannerPos = IronSourceBannerPosition.TOP;
+                break;
+            default:
+                bannerPos = IronSourceBannerPosition.BOTTOM;
+                break;
+        }
+        IronSource.Agent.loadBanner(IronSourceBannerSize.SMART, bannerPos);
         showBannerAd = true;
     }
     public void DestroyBannerAd()
@@ -338,6 +348,11 @@ public class AdManager : MonoBehaviour
     {
         Successful,
         Failed
+    }
+    public enum BannerAdPosition
+    {
+        TOP,
+        BOTTOM
     }
 
 }
