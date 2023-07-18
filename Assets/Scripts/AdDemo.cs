@@ -9,7 +9,7 @@ public class AdDemo : MonoBehaviour
 
     public void ShowBannerAd()
     {
-        AdManager.Instance.ShowBannerAd();
+        AdManager.Instance.ShowBannerAd(IronSourceBannerPosition.BOTTOM);
     }
     public void HideBannerAd()
     {
@@ -21,6 +21,11 @@ public class AdDemo : MonoBehaviour
     }
     public void showRewarded()
     {
-        AdManager.Instance.ShowRewardedAd((RewardedAdResult result) => { Debug.LogWarning(result.ToString()); });
+        AdManager.Instance.ShowRewardedAd(
+            (AdManager.RewardedAdResult result) => 
+            { 
+                Debug.LogWarning(result.ToString()); 
+            }
+            );
     }
 }
